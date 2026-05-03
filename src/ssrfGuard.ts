@@ -1,0 +1,136 @@
+/**
+ * SSRF guard — resolves a URL's hostname and rejects requests targeting
+ * private, loopback, link-local, or otherwise unsafe IP ranges.
+ *
+ * Used to prevent attackers from coercing unfurl into making HTTP requests
+ * to internal infrastructure (cloud metadata endpoints, internal APIs,
+ * private network services, etc).
+ */
+
+import { URL } from "url";
+import { promises as dns } from "dns";
+import { isIP } from "net";
+
+export class SSRFError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "SSRFError";
+  }
+}
+
+const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
+
+/**
+ * Returns true if the given IP address is in a range that should not be
+ * reachable from a public-input URL fetcher. Covers IPv4 and IPv6.
+ */
+export function isPrivateOrReservedIP(ip: string): boolean {
+  const family = isIP(ip);
+  if (family === 0) return false;
+
+  if (family === 4) {
+    const parts = ip.split(".").map((p) => parseInt(p, 10));
+    const [a, b] = parts;
+
+    // 0.0.0.0/8 — current network
+    if (a === 0) return true;
+    // 10.0.0.0/8 — private
+    if (a === 10) return true;
+    // 127.0.0.0/8 — loopback
+    if (a === 127) return true;
+    // 169.254.0.0/16 — link-local (includes cloud metadata 169.254.169.254)
+    if (a === 169 && b === 254) return true;
+    // 172.16.0.0/12 — private
+    if (a === 172 && b >= 16 && b <= 31) return true;
+    // 192.0.0.0/24, 192.0.2.0/24 — reserved/documentation
+    if (a === 192 && b === 0) return true;
+    // 192.168.0.0/16 — private
+    if (a === 192 && b === 168) return true;
+    // 198.18.0.0/15 — benchmarking
+    if (a === 198 && (b === 18 || b === 19)) return true;
+    // 198.51.100.0/24 — documentation
+    if (a === 198 && b === 51) return true;
+    // 203.0.113.0/24 — documentation
+    if (a === 203 && b === 0) return true;
+    // 224.0.0.0/4 — multicast
+    if (a >= 224 && a <= 239) return true;
+    // 240.0.0.0/4 — reserved (includes 255.255.255.255 broadcast)
+    if (a >= 240) return true;
+
+    return false;
+  }
+
+  // IPv6
+  const normalized = ip.toLowerCase();
+
+  // Loopback ::1
+  if (normalized === "::1") return true;
+  // Unspecified ::
+  if (normalized === "::") return true;
+  // IPv4-mapped IPv6 (::ffff:x.x.x.x) — recurse on the embedded v4
+  const v4MappedMatch = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4MappedMatch) return isPrivateOrReservedIP(v4MappedMatch[1]);
+  // Unique local fc00::/7
+  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
+  // Link-local fe80::/10
+  if (normalized.startsWith("fe8") || normalized.startsWith("fe9") ||
+      normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
+  // Multicast ff00::/8
+  if (normalized.startsWith("ff")) return true;
+
+  return false;
+}
+
+/**
+ * Validates that a URL is safe to fetch from a public-input link-preview
+ * context: must be http(s) and must not resolve to a private/reserved IP.
+ *
+ * Throws SSRFError if the URL fails any check. Resolves silently if safe.
+ */
+export async function assertSafeURL(rawUrl: string, allowPrivateIPs = false): Promise<void> {
+  if (allowPrivateIPs) return;
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    throw new SSRFError(`Invalid URL: ${rawUrl}`);
+  }
+
+  if (!ALLOWED_PROTOCOLS.has(parsed.protocol)) {
+    throw new SSRFError(`Disallowed protocol: ${parsed.protocol}`);
+  }
+
+  const hostname = parsed.hostname;
+  if (!hostname) {
+    throw new SSRFError("URL has no hostname");
+  }
+
+  // If the hostname is already a literal IP, validate it directly.
+  if (isIP(hostname) !== 0) {
+    if (isPrivateOrReservedIP(hostname)) {
+      throw new SSRFError(`Disallowed destination IP: ${hostname}`);
+    }
+    return;
+  }
+
+  // Otherwise resolve all addresses and reject if ANY resolve to a
+  // forbidden range. (Defense against DNS responses with mixed records.)
+  let addresses: { address: string; family: number }[];
+  try {
+    addresses = await dns.lookup(hostname, { all: true });
+  } catch (err) {
+    throw new SSRFError(`Failed to resolve ${hostname}: ${(err as Error).message}`);
+  }
+
+  if (addresses.length === 0) {
+    throw new SSRFError(`No addresses resolved for ${hostname}`);
+  }
+
+  for (const { address } of addresses) {
+    if (isPrivateOrReservedIP(address)) {
+      throw new SSRFError(
+        `Hostname ${hostname} resolves to disallowed IP ${address}`
+      );
+    }
+  }
+}

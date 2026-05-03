@@ -9,7 +9,7 @@ test("should build players[]", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/twitter_card/players");
+  const result = await unfurl("http://localhost/twitter_card/players", { allowPrivateIPs: true });
   const expected = {
     players: [
       {
@@ -35,7 +35,7 @@ test("should build images[]", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/twitter_card/images");
+  const result = await unfurl("http://localhost/twitter_card/images", { allowPrivateIPs: true });
   const expected = {
     images: [
       {
@@ -59,7 +59,7 @@ test("should build apps[]", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/twitter_card/apps");
+  const result = await unfurl("http://localhost/twitter_card/apps", { allowPrivateIPs: true });
   const expected = {
     apps: {
       googleplay: {
@@ -86,7 +86,7 @@ test("should quality relative urls", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/twitter_card/relative_url");
+  const result = await unfurl("http://localhost/twitter_card/relative_url", { allowPrivateIPs: true });
   const expected = {
     images: [
       {
@@ -118,7 +118,7 @@ test("should build card", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/twitter_card/multi");
+  const result = await unfurl("http://localhost/twitter_card/multi", { allowPrivateIPs: true });
 
   const expected = {
     apps: {

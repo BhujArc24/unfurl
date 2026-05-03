@@ -6,6 +6,7 @@ import { schema, keys } from "./schema";
 import { Metadata, Opts } from "./types";
 import { decode as he_decode } from "he";
 import { decode as iconv_decode } from "iconv-lite";
+import { assertSafeURL } from "./ssrfGuard";
 
 type ParserContext = {
   isHtml?: boolean;
@@ -46,6 +47,7 @@ function unfurl(url: string, opts?: Opts): Promise<Metadata> {
 }
 
 async function getPage(url: string, opts: Opts) {
+  await assertSafeURL(url, opts.allowPrivateIPs);
   const res = await (opts.fetch
     ? opts.fetch(url)
     : nodeFetch(new URL(url), {
@@ -122,14 +124,14 @@ async function getPage(url: string, opts: Opts) {
   return buf.toString();
 }
 
-function getRemoteMetadata(url: string, { fetch = nodeFetch }: Opts) {
+function getRemoteMetadata(url: string, { fetch = nodeFetch, allowPrivateIPs }: Opts) {
   return async function ({ oembed, metadata }) {
     if (!oembed) {
       return metadata;
     }
 
     const target = new URL(he_decode(oembed.href), url);
-
+    await assertSafeURL(target.href, allowPrivateIPs);
     let res = await fetch(target.href);
     let contentType = res.headers.get("Content-Type");
     const status = res.status;

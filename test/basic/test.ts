@@ -8,7 +8,7 @@ test("should handle content which is escaped badly", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/html/double-escaped-edge-case");
+  const result = await unfurl("http://localhost/html/double-escaped-edge-case", { allowPrivateIPs: true });
 
   expect(result.description).toEqual('"');
 });
@@ -20,7 +20,7 @@ test("should detect title, description, keywords and canonical URL", async () =>
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/html/basic");
+  const result = await unfurl("http://localhost/html/basic", { allowPrivateIPs: true });
 
   const expected = {
     favicon: "http://localhost/favicon.ico",
@@ -42,7 +42,7 @@ test("should detect title, description, keywords and canonical URL even when the
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/html/basic-body");
+  const result = await unfurl("http://localhost/html/basic-body", { allowPrivateIPs: true });
 
   const expected = {
     favicon: "http://localhost/favicon.ico",
@@ -62,7 +62,7 @@ test("should detect last dupe of title, description and keywords", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/html/basic-duplicates");
+  const result = await unfurl("http://localhost/html/basic-duplicates", { allowPrivateIPs: true });
 
   const expected = {
     favicon: "http://localhost/favicon.ico",
@@ -81,7 +81,7 @@ test("should detect last dupe of title, description and keywords", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/html/keyword-edge-cases");
+  const result = await unfurl("http://localhost/html/keyword-edge-cases", { allowPrivateIPs: true });
 
   const expected = {
     favicon: "http://localhost/favicon.ico",

@@ -8,7 +8,7 @@ test("should build videos[]", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/open_graph/videos");
+  const result = await unfurl("http://localhost/open_graph/videos", { allowPrivateIPs: true });
   const expected = {
     videos: [
       {
@@ -41,7 +41,7 @@ test("should build images[]", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/open_graph/images");
+  const result = await unfurl("http://localhost/open_graph/images", { allowPrivateIPs: true });
   const expected = {
     images: [
       {
@@ -79,7 +79,7 @@ test("should build audio[]", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/open_graph/audio");
+  const result = await unfurl("http://localhost/open_graph/audio", { allowPrivateIPs: true });
   const expected = {
     audio: [
       {
@@ -109,7 +109,7 @@ test("should quality relative urls", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/open_graph/relative_url");
+  const result = await unfurl("http://localhost/open_graph/relative_url", { allowPrivateIPs: true });
   const expected = {
     images: [
       {
@@ -134,7 +134,7 @@ test("should build article[]", async () => {
       "Content-Type": "text/html",
     });
 
-  const result = await unfurl("http://localhost/open_graph/article");
+  const result = await unfurl("http://localhost/open_graph/article", { allowPrivateIPs: true });
   const expected = {
     type: "article",
     articles: [
