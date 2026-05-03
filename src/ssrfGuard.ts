@@ -8,6 +8,7 @@
  */
 
 import { URL } from "url";
+import nodeFetch, { RequestInit, Response } from "node-fetch";
 import { promises as dns } from "dns";
 import { isIP } from "net";
 
@@ -133,4 +134,48 @@ export async function assertSafeURL(rawUrl: string, allowPrivateIPs = false): Pr
       );
     }
   }
+}
+
+/**
+ * Wraps node-fetch with manual redirect handling so that each redirect
+ * target is re-validated against the SSRF guard. node-fetch's automatic
+ * redirect-following bypasses any one-shot pre-fetch validation, so we
+ * have to walk the chain ourselves.
+ */
+export async function safeFetch(
+  initialUrl: string,
+  init: RequestInit & { follow?: number; allowPrivateIPs?: boolean } = {}
+): Promise<Response> {
+  const maxRedirects = typeof init.follow === "number" ? init.follow : 20;
+  const allowPrivateIPs = init.allowPrivateIPs === true;
+
+  // Strip our custom keys before passing to node-fetch.
+  const { follow: _f, allowPrivateIPs: _a, ...fetchInit } = init;
+
+  let currentUrl = initialUrl;
+
+  for (let hop = 0; hop <= maxRedirects; hop++) {
+    await assertSafeURL(currentUrl, allowPrivateIPs);
+
+    const res = await nodeFetch(currentUrl, {
+      ...fetchInit,
+      redirect: "manual",
+    });
+
+    // Not a redirect — return as-is.
+    if (res.status < 300 || res.status >= 400) {
+      return res;
+    }
+
+    const location = res.headers.get("location");
+    if (!location) {
+      // Redirect status with no Location header — return what we got.
+      return res;
+    }
+
+    // Resolve relative redirects against the URL that produced them.
+    currentUrl = new URL(location, currentUrl).href;
+  }
+
+  throw new SSRFError(`Too many redirects (>${maxRedirects})`);
 }

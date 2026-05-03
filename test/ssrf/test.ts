@@ -1,5 +1,6 @@
-import { assertSafeURL, isPrivateOrReservedIP, SSRFError } from "../../src/ssrfGuard";
+import { assertSafeURL, isPrivateOrReservedIP, SSRFError, safeFetch } from "../../src/ssrfGuard";
 import { unfurl } from "../../src/index";
+import nock from "nock";
 
 describe("isPrivateOrReservedIP", () => {
   test.each([
@@ -74,6 +75,34 @@ describe("unfurl SSRF integration", () => {
   test("unfurl rejects AWS metadata endpoint", async () => {
     await expect(
       unfurl("http://169.254.169.254/latest/meta-data/iam/security-credentials/")
+    ).rejects.toThrow(SSRFError);
+  });
+});
+
+describe("safeFetch redirect handling", () => {
+  afterEach(() => {
+    nock.cleanAll();
+  });
+
+  test("follows redirects when validation is bypassed", async () => {
+    nock("http://localhost")
+      .get("/hop1")
+      .reply(302, "", { Location: "http://localhost/hop2" })
+      .get("/hop2")
+      .reply(200, "ok");
+
+    const res = await safeFetch("http://localhost/hop1", { allowPrivateIPs: true });
+    expect(res.status).toBe(200);
+  });
+
+  test("rejects too many redirects", async () => {
+    nock("http://localhost")
+      .get("/loop")
+      .times(25)
+      .reply(302, "", { Location: "http://localhost/loop" });
+
+    await expect(
+      safeFetch("http://localhost/loop", { allowPrivateIPs: true, follow: 3 })
     ).rejects.toThrow(SSRFError);
   });
 });

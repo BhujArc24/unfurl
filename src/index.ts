@@ -6,7 +6,7 @@ import { schema, keys } from "./schema";
 import { Metadata, Opts } from "./types";
 import { decode as he_decode } from "he";
 import { decode as iconv_decode } from "iconv-lite";
-import { assertSafeURL } from "./ssrfGuard";
+import { assertSafeURL, safeFetch } from "./ssrfGuard";
 
 type ParserContext = {
   isHtml?: boolean;
@@ -47,14 +47,14 @@ function unfurl(url: string, opts?: Opts): Promise<Metadata> {
 }
 
 async function getPage(url: string, opts: Opts) {
-  await assertSafeURL(url, opts.allowPrivateIPs);
   const res = await (opts.fetch
     ? opts.fetch(url)
-    : nodeFetch(new URL(url), {
+    : safeFetch(url, {
         headers: opts.headers,
         size: opts.size,
         follow: opts.follow,
         timeout: opts.timeout,
+        allowPrivateIPs: opts.allowPrivateIPs,
       }));
 
   const buf = Buffer.from(await res.arrayBuffer());
@@ -124,15 +124,18 @@ async function getPage(url: string, opts: Opts) {
   return buf.toString();
 }
 
-function getRemoteMetadata(url: string, { fetch = nodeFetch, allowPrivateIPs }: Opts) {
+function getRemoteMetadata(url: string, { fetch, allowPrivateIPs }: Opts) {
   return async function ({ oembed, metadata }) {
     if (!oembed) {
       return metadata;
     }
 
     const target = new URL(he_decode(oembed.href), url);
-    await assertSafeURL(target.href, allowPrivateIPs);
-    let res = await fetch(target.href);
+    const doFetch = fetch
+      ? (u: string) => fetch(u)
+      : (u: string) => safeFetch(u, { allowPrivateIPs });
+
+    let res = await doFetch(target.href);
     let contentType = res.headers.get("Content-Type");
     const status = res.status;
 
@@ -140,7 +143,7 @@ function getRemoteMetadata(url: string, { fetch = nodeFetch, allowPrivateIPs }: 
       // try again using HTTPS
       target.protocol = "https:";
 
-      res = await fetch(target.href);
+      res = await doFetch(target.href);
       contentType = res.headers.get("Content-Type");
     }
 
