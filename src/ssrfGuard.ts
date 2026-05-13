@@ -28,10 +28,10 @@ const ALLOWED_PROTOCOLS = new Set(["http:", "https:"]);
 export function isPrivateOrReservedIP(ip: string): boolean {
   const family = isIP(ip);
   if (family === 0) return false;
+  ip = ip.toLowerCase();
 
   if (family === 4) {
-  const [octet1, octet2] = ip.split(".").map(p => parseInt(p, 10));
-    const [a, b] = parts;
+    const [a, b] = ip.split(".").map((p) => parseInt(p, 10));
 
     // 0.0.0.0/8 — current network
     if (a === 0) return true;
@@ -62,22 +62,20 @@ export function isPrivateOrReservedIP(ip: string): boolean {
   }
 
   // IPv6
-  const normalized = ip.toLowerCase();
-
   // Loopback ::1
-  if (normalized === "::1") return true;
+  if (ip === "::1") return true;
   // Unspecified ::
-  if (normalized === "::") return true;
+  if (ip === "::") return true;
   // IPv4-mapped IPv6 (::ffff:x.x.x.x) — recurse on the embedded v4
-  const v4MappedMatch = normalized.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  const v4MappedMatch = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (v4MappedMatch) return isPrivateOrReservedIP(v4MappedMatch[1]);
   // Unique local fc00::/7
-  if (normalized.startsWith("fc") || normalized.startsWith("fd")) return true;
+  if (ip.startsWith("fc") || ip.startsWith("fd")) return true;
   // Link-local fe80::/10
-  if (normalized.startsWith("fe8") || normalized.startsWith("fe9") ||
-      normalized.startsWith("fea") || normalized.startsWith("feb")) return true;
+  if (ip.startsWith("fe8") || ip.startsWith("fe9") ||
+      ip.startsWith("fea") || ip.startsWith("feb")) return true;
   // Multicast ff00::/8
-  if (normalized.startsWith("ff")) return true;
+  if (ip.startsWith("ff")) return true;
 
   return false;
 }
@@ -150,8 +148,8 @@ export async function safeFetch(
   const allowPrivateIPs = init.allowPrivateIPs === true;
 
   // Strip our custom keys before passing to node-fetch.
-  delete init.follow
-  delete init.allowPrivateIPs
+  delete init.follow;
+  delete init.allowPrivateIPs;
 
   let currentUrl = initialUrl;
 
@@ -159,7 +157,7 @@ export async function safeFetch(
     await assertSafeURL(currentUrl, allowPrivateIPs);
 
     const res = await nodeFetch(currentUrl, {
-      ...fetchInit,
+      ...init,
       redirect: "manual",
     });
 
