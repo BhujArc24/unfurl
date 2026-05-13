@@ -30,7 +30,7 @@ export function isPrivateOrReservedIP(ip: string): boolean {
   if (family === 0) return false;
 
   if (family === 4) {
-    const parts = ip.split(".").map((p) => parseInt(p, 10));
+  const [octet1, octet2] = ip.split(".").map(p => parseInt(p, 10));
     const [a, b] = parts;
 
     // 0.0.0.0/8 — current network
