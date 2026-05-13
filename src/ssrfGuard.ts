@@ -150,7 +150,8 @@ export async function safeFetch(
   const allowPrivateIPs = init.allowPrivateIPs === true;
 
   // Strip our custom keys before passing to node-fetch.
-  const { follow: _f, allowPrivateIPs: _a, ...fetchInit } = init;
+  delete init.follow
+  delete init.allowPrivateIPs
 
   let currentUrl = initialUrl;
 
