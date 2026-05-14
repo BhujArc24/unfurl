@@ -1,12 +1,11 @@
 import { URL } from "url";
 import { Parser } from "htmlparser2";
-import nodeFetch from "node-fetch";
 import UnexpectedError from "./unexpectedError";
 import { schema, keys } from "./schema";
 import { Metadata, Opts } from "./types";
 import { decode as he_decode } from "he";
 import { decode as iconv_decode } from "iconv-lite";
-import { assertSafeURL, safeFetch } from "./ssrfGuard";
+import { safeFetch } from "./ssrfGuard";
 
 type ParserContext = {
   isHtml?: boolean;

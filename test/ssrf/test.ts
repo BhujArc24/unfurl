@@ -1,4 +1,9 @@
-import { assertSafeURL, isPrivateOrReservedIP, SSRFError, safeFetch } from "../../src/ssrfGuard";
+import {
+  assertSafeURL,
+  isPrivateOrReservedIP,
+  SSRFError,
+  safeFetch,
+} from "../../src/ssrfGuard";
 import { unfurl } from "../../src/index";
 import nock from "nock";
 
@@ -35,23 +40,33 @@ describe("isPrivateOrReservedIP", () => {
 
 describe("assertSafeURL", () => {
   test("rejects loopback literal", async () => {
-    await expect(assertSafeURL("http://127.0.0.1/foo")).rejects.toThrow(SSRFError);
+    await expect(assertSafeURL("http://127.0.0.1/foo")).rejects.toThrow(
+      SSRFError
+    );
   });
 
   test("rejects AWS metadata IP", async () => {
-    await expect(assertSafeURL("http://169.254.169.254/latest/meta-data/")).rejects.toThrow(SSRFError);
+    await expect(
+      assertSafeURL("http://169.254.169.254/latest/meta-data/")
+    ).rejects.toThrow(SSRFError);
   });
 
   test("rejects private IP", async () => {
-    await expect(assertSafeURL("http://192.168.1.1/admin")).rejects.toThrow(SSRFError);
+    await expect(assertSafeURL("http://192.168.1.1/admin")).rejects.toThrow(
+      SSRFError
+    );
   });
 
   test("rejects file:// protocol", async () => {
-    await expect(assertSafeURL("file:///etc/passwd")).rejects.toThrow(SSRFError);
+    await expect(assertSafeURL("file:///etc/passwd")).rejects.toThrow(
+      SSRFError
+    );
   });
 
   test("rejects gopher:// protocol", async () => {
-    await expect(assertSafeURL("gopher://localhost/")).rejects.toThrow(SSRFError);
+    await expect(assertSafeURL("gopher://localhost/")).rejects.toThrow(
+      SSRFError
+    );
   });
 
   test("rejects malformed URL", async () => {
@@ -74,7 +89,9 @@ describe("unfurl SSRF integration", () => {
 
   test("unfurl rejects AWS metadata endpoint", async () => {
     await expect(
-      unfurl("http://169.254.169.254/latest/meta-data/iam/security-credentials/")
+      unfurl(
+        "http://169.254.169.254/latest/meta-data/iam/security-credentials/"
+      )
     ).rejects.toThrow(SSRFError);
   });
 });
@@ -91,7 +108,9 @@ describe("safeFetch redirect handling", () => {
       .get("/hop2")
       .reply(200, "ok");
 
-    const res = await safeFetch("http://localhost/hop1", { allowPrivateIPs: true });
+    const res = await safeFetch("http://localhost/hop1", {
+      allowPrivateIPs: true,
+    });
     expect(res.status).toBe(200);
   });
 

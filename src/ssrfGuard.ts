@@ -72,8 +72,13 @@ export function isPrivateOrReservedIP(ip: string): boolean {
   // Unique local fc00::/7
   if (ip.startsWith("fc") || ip.startsWith("fd")) return true;
   // Link-local fe80::/10
-  if (ip.startsWith("fe8") || ip.startsWith("fe9") ||
-      ip.startsWith("fea") || ip.startsWith("feb")) return true;
+  if (
+    ip.startsWith("fe8") ||
+    ip.startsWith("fe9") ||
+    ip.startsWith("fea") ||
+    ip.startsWith("feb")
+  )
+    return true;
   // Multicast ff00::/8
   if (ip.startsWith("ff")) return true;
 
@@ -86,7 +91,10 @@ export function isPrivateOrReservedIP(ip: string): boolean {
  *
  * Throws SSRFError if the URL fails any check. Resolves silently if safe.
  */
-export async function assertSafeURL(rawUrl: string, allowPrivateIPs = false): Promise<void> {
+export async function assertSafeURL(
+  rawUrl: string,
+  allowPrivateIPs = false
+): Promise<void> {
   if (allowPrivateIPs) return;
   let parsed: URL;
   try {
@@ -118,7 +126,9 @@ export async function assertSafeURL(rawUrl: string, allowPrivateIPs = false): Pr
   try {
     addresses = await dns.lookup(hostname, { all: true });
   } catch (err) {
-    throw new SSRFError(`Failed to resolve ${hostname}: ${(err as Error).message}`);
+    throw new SSRFError(
+      `Failed to resolve ${hostname}: ${(err as Error).message}`
+    );
   }
 
   if (addresses.length === 0) {
